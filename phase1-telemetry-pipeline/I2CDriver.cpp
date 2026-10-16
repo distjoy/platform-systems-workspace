@@ -5,7 +5,12 @@ class I2CDriver {
     public:
 
         enum Status {
-
+            Ok,
+            Timeout,
+            BusError,
+            ArbitrationLost,
+            Nack,
+            Overrun
         };
 
         void init(){
@@ -53,12 +58,155 @@ class I2CDriver {
 
         }
 
-        void readFrom(){
+        Status readFrom(uint8_t device, 
+            uint8_t register, uint8& byteData){
+
+                Status status =  Status::Ok;
+                status = start();
+                if(status != Status::Ok){
+                    handleFailure(status);
+                    return status;
+                }
+                                
+                //send address
+                status = sendAddress(device, false);
+                if(status != Status::Ok)
+                    return handleFailure(status);
+
+                //Write register address
+                status =  writeByte(register);
+                if(status != Status::Ok)
+                    return handleFailure(status);
+
+                //Restart coms
+
+                status = start();
+                if(status != Status::Ok){
+                    handleFailure(status);
+                    return status;
+                }
+
+                //send address now for reading
+                status = sendAddress(device, true);
+                if(status != Status::Ok)
+                    return handleFailure(status);
+
+                //prepare to read     
+                const uint32_t primask = __get_PRIMASK();
+                __disable_irq();
+
+                I2C1->CR1 &= ~I2C_CR1_ACK;
+                clearAddressFlag();
+                stop();
+
+                __set_PRIMASK(primask); 
+
+                //actually read the data
+                status = waitFor(I2C_SR1_RXNE);
+                if (status != Status::Ok)
+                    return fail(status);
+
+                value = static_cast<uint8_t>(I2C1->DR);
+
+                I2C1->CR1 |= I2C_CR1_ACK;
+                
+            return Status::Ok;
 
         }
+    
 
 
     private:
+
+    const uint32_t TIMEOUT = 1000000U;
+    Status waitFor(uint32_t flag){
+        uint32_t timeout = TIMEOUT;
+
+        while (timeout > 0U)
+        {
+            uint128_t sr1 = I2C1->SR1;
+            if( sr1 & flag)
+                return Status::Ok;
+
+            if(sr1 & I2C_SR1_AF)
+                return Status::Nack;
+
+            if(sr1 & I2C_SR1_BERR)
+                return Status::BusError;
+
+            if(sr1 & I2C_SR1_ARLO)
+                return Status::ArbitrationLost;
+
+            if(sr1 & I2C_SR1_OVR)
+                return Status::Overrun;
+
+            if(--timeout == 0U)
+                return Status::Timeout;
+        } 
+
+    }
+
+    bool waitBusIdle(){
+        uint32_t timeout = TIMEOUT;
+
+        while (I2C1->SR2 & I2C_SR2_BUSY)
+        {
+            if(--timeout == 0U)
+                return false;
+        }
+        return true;
+    }
+
+    void clearAddressFlag(){
+
+    }
+
+
+    Status sendAddress(uint8_t addr, bool read){
+        I2C1->DR = (addr << 1) | (read ? 1U :0U);
+
+        auto status = waitFor(I2C1_SR1_ADD);
+        if(status != Status::Ok)
+            return status;
+
+        clearAddresFlag();
+
+    }
+
+    Status start(){
+        I2C1->CR |= I2C_CR_START;
+        return  waitfor(I2C_SR1_SB);
+    }
+
+    void stop(){
+        I2C1->CR |= I2C_CR_STOP;
+    }
+
+    Status writeByte(uint8_t* byte ){
+        Status status = waitFor(I2C_SR1_TXE);
+        if(Status::Ok != status)
+            return status;
+
+        I2C1->DR = **byte;
+        return waitFor(I2C_SR1_BTF);
+    }
+
+    Status handleFailure(Status failure){
+        if (I2C1->SR2 & I2C_SR2_MSL)
+        {
+            stop();
+        }
+
+        //Clear all error flags
+        I2C1->SR1 = ~(I2C_SR1_AF |
+        I2C_SR1_ARLO|
+    I2C_SR1_BERR, | I2C_SR1_Nack)
+
+        I2C1->CR1 |= I2C_CR1_ACK; 
+        
+
+        return failure;
+    }
 
 
 };
