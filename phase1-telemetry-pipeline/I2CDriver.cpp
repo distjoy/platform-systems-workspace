@@ -1,3 +1,5 @@
+#include "stm32f4xx.h"
+
 
 class I2CDriver {
     public:
@@ -19,21 +21,28 @@ class I2CDriver {
             GPIOB->MODER |= ((2U << 16) | (2U << 18));
 
             //Open drain
-            GPIOB->OTYPER 
+            GPIOB->OTYPER |= ((1U << 8) | (1U <<9));
 
             //High speed outputs
-            GPIOB->OSPEEDR 
+            GPIOB->OSPEEDR |= ((3U << GPIO_OSPEEDR_OSPEED8_Pos) | (3U <<GPIO_OSPEEDR_OSPEED9_Pos));
 
             //Alternate Function
-            GPIOB->AFR[1]
-            GPIOB->AFR[1]
+            GPIOB->AFR[1] &=((0xFU << GPIO_AFRH_AFSEL9_Pos) | (0xFU << GPIO_AFRH_AFSEL9_Pos) );
+            GPIOB->AFR[1] &=((4U << GPIO_AFRH_AFSEL9_Pos) | (4U << GPIO_AFRH_AFSEL9_Pos) );
 
-            I2C1->CR1 = 
-            I2C1->CR2 
 
-            I2C1->CCR
-            I2C1->TRISE
-            I2C1 
+
+            
+
+            I2C1->CR1 &= ~I2C_CR1_PE;
+
+            //Sets pclk1
+            I2C1->CR2 = 16U;
+
+            I2C1->CCR = 80U;
+            I2C1->TRISE = 17U;
+            
+            I2C1->CR1 |= I2C_CR1_PE; 
 
 
 
@@ -56,12 +65,12 @@ class I2CDriver {
 
 
 
-start 
+/** start 
 select device 
 check for acknowledge
 write internal register 
 check for ack
 select device for reading
 check for ack
-read 
+read **/
 
