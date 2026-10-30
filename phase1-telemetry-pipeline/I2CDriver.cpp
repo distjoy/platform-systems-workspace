@@ -58,39 +58,57 @@ class I2CDriver {
 
         }
 
+            
+        Status prepareToRead(uint8_t device, uint8_t store){
+            Status status =  Status::Ok;
+            status = start();
+            if(status != Status::Ok){
+                handleFailure(status);
+                return status;
+            }
+                            
+            //send address
+            status = sendAddress(device, false);
+            if(status != Status::Ok)
+                return handleFailure(status);
+
+            //Write register address
+            status =  writeByte(store);
+            if(status != Status::Ok)
+                return handleFailure(status);
+
+            //Restart coms
+
+            status = start();
+            if(status != Status::Ok){
+                handleFailure(status);
+                return status;
+            }
+
+            //send address now for reading
+            status = sendAddress(device, true);
+            if(status != Status::Ok)
+                return handleFailure(status);
+        }
+
+        Status setupDMARead(uint8_t device, uint8_t store){
+                Status status;
+                status = prepareToRead(device,store);
+                
+        }
+
+
+
         Status readFrom(uint8_t device, 
-            uint8_t rAddr, uint8_t& byteData){
+            uint8_t store, uint8_t& byteData){        
+                Status status;
 
-                Status status =  Status::Ok;
-                status = start();
+                status = prepareToRead(device,store);
+
                 if(status != Status::Ok){
                     handleFailure(status);
                     return status;
                 }
-                                
-                //send address
-                status = sendAddress(device, false);
-                if(status != Status::Ok)
-                    return handleFailure(status);
-
-                //Write register address
-                status =  writeByte(&rAddr);
-                if(status != Status::Ok)
-                    return handleFailure(status);
-
-                //Restart coms
-
-                status = start();
-                if(status != Status::Ok){
-                    handleFailure(status);
-                    return status;
-                }
-
-                //send address now for reading
-                status = sendAddress(device, true);
-                if(status != Status::Ok)
-                    return handleFailure(status);
-
                 //prepare to read     
                 const uint32_t primask = __get_PRIMASK();
                 __disable_irq();
@@ -113,8 +131,6 @@ class I2CDriver {
             return Status::Ok;
 
         }
-    
-
 
     private:
 

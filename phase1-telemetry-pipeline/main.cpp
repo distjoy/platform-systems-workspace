@@ -74,6 +74,26 @@ void init_dma(std::vector<uint16_t> buffer, uint32_t paddr){
 }
 
 
+//setup mcu for sensor external interrupt
+void DRDY_EXTI_Init(){
+
+    //Enable GPIO for external interupt
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA->MODER &= ~ (0xFU << 0);
+
+    //Enable syscfg
+    RCC->SYSCFG |= RCC_APB2ENR_SYSCFGEN;
+    SYSCFG->EXTICR[0] &= ~SYSCFG_EXTICR1_EXT10;
+
+    EXTI->IMR |= EXTI_IMR_MRO;
+    EXTI->RTSR |= EXTI_RTSR_TRO;
+    EXTI->FTSR  &=  ~EXTI_FTSR_TRO; //Disable falling edge
+    EXTI->PR = EXTI_PR_PRO;
+
+    NVIC_EnableIRQ(EXTIIO_IRQn);
+
+}
+
 void init_adc(){
 
     //Enable ADC Clock
@@ -136,3 +156,24 @@ void adc_start(){
 }
 
 
+//Sensor Interrupt handler (i2c)
+void EXTIO_IRQHandler(void){
+    if(EXTIO->PR & EXTIO_PR_PRO){
+
+        //setupDMARead from i2c
+    }
+}
+
+
+//DMA Interrupt handler
+void DMA2_Stream0_IRQHandler(void) {
+
+    if(DMA1->LISR & DMA_LISR_TCIFO){
+        //Stop DMA read from i2c
+    }
+
+    if(DMA1->LISR & DMA_LISR_TEIFO){
+
+    }
+
+}
