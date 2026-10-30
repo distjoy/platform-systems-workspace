@@ -37,8 +37,8 @@ class SpiMaster {
 
         void init(Mode mode, Prescaler divider);
 
-        Status read(uint8_t* buffer, size_t length);
-        Status write(const uint8_t* data, size_t length);
+        Status read(uint8_t* buffer, std::size_t length);
+        Status write(const uint8_t* data, std::size_t length);
 
         uint8_t transfer(uint8_t data);
 

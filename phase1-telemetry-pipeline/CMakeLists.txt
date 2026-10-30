@@ -15,7 +15,12 @@ set(MCU_FLAGS
 )
 
 # 1. Declare the executable target
-add_executable(${PROJECT_NAME} main.cpp
+add_executable(${PROJECT_NAME} 
+    main.cpp
+    I2CDriver.cpp
+    I2CDriver.hpp
+    SpiMaster.cpp
+    SpiMaster.hpp
     ../../Drivers/CMSIS/cmsis_f4/Source/Templates/gcc/startup_stm32f411xe.s
     ../../Drivers/CMSIS/cmsis_f4/Source/Templates/system_stm32f4xx.c)
 

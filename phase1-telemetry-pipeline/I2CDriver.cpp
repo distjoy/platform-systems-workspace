@@ -1,19 +1,7 @@
 #include "stm32f4xx.h"
+#include "I2CDriver.hpp"
 
-
-class I2CDriver {
-    public:
-
-        enum Status {
-            Ok,
-            Timeout,
-            BusError,
-            ArbitrationLost,
-            Nack,
-            Overrun
-        };
-
-        void init(){
+        void I2CDriver::init(){
             //we are using PB 8 and 9, these are the pins
             // used by I2C on stm32, GPIOB <--> I2C1
 
@@ -54,12 +42,16 @@ class I2CDriver {
 
         }
 
-        void writeTo(){
+        void I2CDriver::writeTo(){
 
+        }
+ 
+        uint32_t I2CDriver::getDataAddress(){
+            return  (uint32_t)&(I2C1->DR);
         }
 
             
-        Status prepareToRead(uint8_t device, uint8_t store){
+        I2CDriver::Status I2CDriver::prepareToRead(uint8_t device, uint8_t store){
             Status status =  Status::Ok;
             status = start();
             if(status != Status::Ok){
@@ -91,15 +83,19 @@ class I2CDriver {
                 return handleFailure(status);
         }
 
-        Status setupDMARead(uint8_t device, uint8_t store){
+        I2CDriver::Status I2CDriver::setupDMARead(uint8_t device, uint8_t store){
                 Status status;
                 status = prepareToRead(device,store);
                 
         }
 
+        void I2CDriver::finishDMAReading(){
+            stop();
+        }
 
 
-        Status readFrom(uint8_t device, 
+
+        I2CDriver::Status I2CDriver::readFrom(uint8_t device, 
             uint8_t store, uint8_t& byteData){        
                 Status status;
 
@@ -132,10 +128,9 @@ class I2CDriver {
 
         }
 
-    private:
 
-    const uint32_t TIMEOUT = 1000000U;
-    Status waitFor(uint32_t flag){
+
+    I2CDriver::Status I2CDriver::waitFor(uint32_t flag){
         uint32_t timeout = TIMEOUT;
 
         while (timeout > 0U)
@@ -162,7 +157,7 @@ class I2CDriver {
 
     }
 
-    bool waitBusIdle(){
+    bool I2CDriver::waitBusIdle(){
         uint32_t timeout = TIMEOUT;
 
         while (I2C1->SR2 & I2C_SR2_BUSY)
@@ -173,12 +168,12 @@ class I2CDriver {
         return true;
     }
 
-    void clearAddressFlag(){
+    void I2CDriver::clearAddressFlag(){
 
     }
 
 
-    Status sendAddress(uint8_t addr, bool read){
+    I2CDriver::Status I2CDriver::sendAddress(uint8_t addr, bool read){
         I2C1->DR = (addr << 1) | (read ? 1U :0U);
 
         auto status = waitFor(I2C_SR1_ADDR);
@@ -189,7 +184,7 @@ class I2CDriver {
 
     }
 
-    Status start(){
+    I2CDriver::Status I2CDriver::start(){
         I2C1->CR1 |= I2C_CR1_START;
         return  waitFor(I2C_SR1_SB);
     }
@@ -198,16 +193,16 @@ class I2CDriver {
         I2C1->CR1 |= I2C_CR1_STOP;
     }
 
-    Status writeByte(uint8_t* byte ){
+    I2CDriver::Status I2CDriver::writeByte(uint8_t& byte ){
         Status status = waitFor(I2C_SR1_TXE);
         if(Status::Ok != status)
             return status;
 
-        I2C1->DR = *byte;
+        I2C1->DR = byte;
         return waitFor(I2C_SR1_BTF);
     }
 
-    Status handleFailure(Status failure){
+    I2CDriver::Status I2CDriver::handleFailure(Status failure){
         if (I2C1->SR2 & I2C_SR2_MSL)
         {
             stop();
@@ -228,7 +223,6 @@ class I2CDriver {
     }
 
 
-};
 
 
 

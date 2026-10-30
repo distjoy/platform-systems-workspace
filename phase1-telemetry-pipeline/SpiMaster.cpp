@@ -1,5 +1,6 @@
 #include "stm32f4xx.h"
 #include "SpiMaster.hpp"
+#include <cstdint>
 
 
 void SpiMaster::init_gpio(){
@@ -8,8 +9,8 @@ void SpiMaster::init_gpio(){
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 
     //Set alternative function mode FOR PA5,6,7
-    GPIOA->MODER &= ~(GPIO_MODER_MODE5,GPIO_MODER_MODE6,GPIO_MODER_MODE7);
-    GPIOA->MODER &= ~(GPIO_MODER_MODE5,GPIO_MODER_MODE6,GPIO_MODER_MODE7);
+    GPIOA->MODER &= ~(GPIO_MODER_MODE5|GPIO_MODER_MODE6|GPIO_MODER_MODE7);
+    GPIOA->MODER &= ~(GPIO_MODER_MODE5|GPIO_MODER_MODE6|GPIO_MODER_MODE7);
 
     //select output speed = high 11
     GPIOA->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR5 | GPIO_OSPEEDER_OSPEEDR6 | GPIO_OSPEEDER_OSPEEDR7);
@@ -92,9 +93,9 @@ uint8_t SpiMaster::transfer(uint8_t data){
     return *reinterpret_cast<volatile uint8_t*>(&spi->DR);
 }
 
-SpiMaster::Status SpiMaster::read(uint8_t* buffer, size_t length){
+SpiMaster::Status SpiMaster::read(uint8_t* buffer, std::size_t length){
 
-    for(size_t i =0; i<length; ++i){
+    for(std::size_t i =0; i<length; ++i){
         buffer[i] = transfer(0x00);
     }
 
@@ -109,9 +110,9 @@ SpiMaster::Status SpiMaster::read(uint8_t* buffer, size_t length){
    
 }
 
-SpiMaster::Status SpiMaster::write(const uint8_t* data, size_t length){
+SpiMaster::Status SpiMaster::write(const uint8_t* data, std::size_t length){
 
-    for(size_t i =0; i<length; ++i){
+    for(std::size_t i =0; i<length; ++i){
         transfer(data[i]);
     }
 
