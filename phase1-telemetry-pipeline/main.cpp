@@ -1,4 +1,5 @@
 #include "stm32f4xx.h"
+#include <vector>
 
 
 /*
@@ -9,13 +10,25 @@
 int main(){
 
     std::vector<uint16_t> data_buffer(100);
+    init_gppio_a();
+    init_adc();
+    init_dma(data_buffer);
+
+    adc_start();
+
+
+    //init I2C1
+    //read from
+    //store in buffer
+    //
 
 
 
 }
 
 
-void init_dma(std::vector<uint16_t> buffer){
+void init_dma(std::vector<uint16_t> buffer, uint32_t paddr){
+    
 
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN; //Enabble dma clock
 
@@ -24,14 +37,13 @@ void init_dma(std::vector<uint16_t> buffer){
     while(DMA2_Stream0->CR & DMA_SxCR_EN){} //DO NOTHING while stream 0 is active
 
 
-
-    DMA2_Stream0->PAR =  (uint32_t) &ADC1->DR;
+    //(uint32_t) &ADC1->DR
+    DMA2_Stream0->PAR =  paddr ;
 
     DMA2_Stream0->M0AR =  (uint32_t)buffer.data();
 
     DMA2_Stream0->NDTR = buffer.size();
 
-    DMA2_Stream0-CR = ;
 
     //Reset stream 0 configuration
     DMA2_Stream0->CR =0;
@@ -62,7 +74,7 @@ void init_dma(std::vector<uint16_t> buffer){
 }
 
 
-void init_acdc(){
+void init_adc(){
 
     //Enable ADC Clock
     RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
@@ -101,6 +113,7 @@ void init_gppio_a(){
 }
 
 void adc_read_via_dma(){
+
 
     ADC1->CR2 |= ADC_CR2_CONT; //setup continuos mode
 

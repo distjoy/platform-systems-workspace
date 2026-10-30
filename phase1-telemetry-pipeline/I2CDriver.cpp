@@ -59,7 +59,7 @@ class I2CDriver {
         }
 
         Status readFrom(uint8_t device, 
-            uint8_t register, uint8& byteData){
+            uint8_t rAddr, uint8_t& byteData){
 
                 Status status =  Status::Ok;
                 status = start();
@@ -74,7 +74,7 @@ class I2CDriver {
                     return handleFailure(status);
 
                 //Write register address
-                status =  writeByte(register);
+                status =  writeByte(&rAddr);
                 if(status != Status::Ok)
                     return handleFailure(status);
 
@@ -104,9 +104,9 @@ class I2CDriver {
                 //actually read the data
                 status = waitFor(I2C_SR1_RXNE);
                 if (status != Status::Ok)
-                    return fail(status);
+                    return handleFailure(status);
 
-                value = static_cast<uint8_t>(I2C1->DR);
+                byteData = static_cast<uint8_t>(I2C1->DR);
 
                 I2C1->CR1 |= I2C_CR1_ACK;
                 
@@ -124,7 +124,7 @@ class I2CDriver {
 
         while (timeout > 0U)
         {
-            uint128_t sr1 = I2C1->SR1;
+            uint32_t sr1 = I2C1->SR1;
             if( sr1 & flag)
                 return Status::Ok;
 
@@ -165,21 +165,21 @@ class I2CDriver {
     Status sendAddress(uint8_t addr, bool read){
         I2C1->DR = (addr << 1) | (read ? 1U :0U);
 
-        auto status = waitFor(I2C1_SR1_ADD);
+        auto status = waitFor(I2C_SR1_ADDR);
         if(status != Status::Ok)
             return status;
 
-        clearAddresFlag();
+        clearAddressFlag();
 
     }
 
     Status start(){
-        I2C1->CR |= I2C_CR_START;
-        return  waitfor(I2C_SR1_SB);
+        I2C1->CR1 |= I2C_CR1_START;
+        return  waitFor(I2C_SR1_SB);
     }
 
     void stop(){
-        I2C1->CR |= I2C_CR_STOP;
+        I2C1->CR1 |= I2C_CR1_STOP;
     }
 
     Status writeByte(uint8_t* byte ){
@@ -187,7 +187,7 @@ class I2CDriver {
         if(Status::Ok != status)
             return status;
 
-        I2C1->DR = **byte;
+        I2C1->DR = *byte;
         return waitFor(I2C_SR1_BTF);
     }
 
@@ -198,9 +198,12 @@ class I2CDriver {
         }
 
         //Clear all error flags
-        I2C1->SR1 = ~(I2C_SR1_AF |
-        I2C_SR1_ARLO|
-    I2C_SR1_BERR, | I2C_SR1_Nack)
+        I2C1->SR1 = ~(
+            I2C_SR1_AF |
+            I2C_SR1_ARLO|
+            I2C_SR1_BERR  | 
+            I2C_SR1_OVR
+        );
 
         I2C1->CR1 |= I2C_CR1_ACK; 
         
