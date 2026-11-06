@@ -12,6 +12,8 @@ set(MCU_FLAGS
     -mthumb
     -mfpu=fpv4-sp-d16
     -mfloat-abi=hard
+    -g3      
+    -O0    
 )
 
 # 1. Declare the executable target
@@ -37,7 +39,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -fdata-sections
     -ffunction-sections
     -fno-exceptions
-    -fno-rtti
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 )
 
 # 4. Link options (applied directly to target)

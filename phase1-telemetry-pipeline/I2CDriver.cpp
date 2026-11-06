@@ -20,8 +20,8 @@
             GPIOB->OSPEEDR |= ((3U << GPIO_OSPEEDR_OSPEED8_Pos) | (3U <<GPIO_OSPEEDR_OSPEED9_Pos));
 
             //Alternate Function
-            GPIOB->AFR[1] &=((0xFU << GPIO_AFRH_AFSEL9_Pos) | (0xFU << GPIO_AFRH_AFSEL9_Pos) );
-            GPIOB->AFR[1] &=((4U << GPIO_AFRH_AFSEL9_Pos) | (4U << GPIO_AFRH_AFSEL9_Pos) );
+            GPIOB->AFR[1] &=((0xFU << GPIO_AFRH_AFSEL8_Pos) | (0xFU << GPIO_AFRH_AFSEL9_Pos) );
+            GPIOB->AFR[1] |=((4U << GPIO_AFRH_AFSEL8_Pos) | (4U << GPIO_AFRH_AFSEL9_Pos) );
 
 
 
@@ -42,8 +42,35 @@
 
         }
 
-        void I2CDriver::writeTo(){
+        I2CDriver::Status I2CDriver::writeTo(uint8_t device,
+                         uint8_t reg,
+                         uint8_t value){
 
+            if (!waitBusIdle())
+                return Status::Busy;
+
+                auto status = start();
+                if (status != Status::Ok)
+                    return handleFailure(status);
+
+                status = sendAddress(device, false);
+                if (status != Status::Ok)
+                    return handleFailure(status);
+
+                status = writeByte(reg);
+                if (status != Status::Ok)
+                    return handleFailure(status);
+
+                status = writeByte(value);
+                if (status != Status::Ok)
+                    return handleFailure(status);
+
+                status = waitFor(I2C_SR1_BTF);
+                if (status != Status::Ok)
+                    return handleFailure(status);
+
+                stop();
+                return Status::Ok;
         }
  
         uint32_t I2CDriver::getDataAddress(){
@@ -81,11 +108,14 @@
             status = sendAddress(device, true);
             if(status != Status::Ok)
                 return handleFailure(status);
+            return Status::Ok;
         }
 
         I2CDriver::Status I2CDriver::setupDMARead(uint8_t device, uint8_t store){
                 Status status;
                 status = prepareToRead(device,store);
+
+                return status;
                 
         }
 
@@ -154,6 +184,7 @@
             if(--timeout == 0U)
                 return Status::Timeout;
         } 
+                    return Status::Ok;
 
     }
 
@@ -169,7 +200,9 @@
     }
 
     void I2CDriver::clearAddressFlag(){
-
+        volatile uint32_t dummy = I2C1->SR1;
+        dummy = I2C1->SR2;
+        (void)dummy;
     }
 
 
@@ -181,7 +214,7 @@
             return status;
 
         clearAddressFlag();
-
+            return Status::Ok;
     }
 
     I2CDriver::Status I2CDriver::start(){
@@ -189,7 +222,7 @@
         return  waitFor(I2C_SR1_SB);
     }
 
-    void stop(){
+    void I2CDriver::stop(){
         I2C1->CR1 |= I2C_CR1_STOP;
     }
 

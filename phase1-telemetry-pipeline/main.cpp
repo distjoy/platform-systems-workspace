@@ -10,8 +10,11 @@
 
 namespace{
     I2CDriver i2c;
-    uint8_t sensor_address;
-    uint8_t sensor_register_address;
+    uint8_t sensor_address = 0x68;
+    uint8_t sensor_register_address = 0x3B;
+    uint8_t sensor_register_address_en_drdy = 0x38;
+    uint8_t sensor_register_address_wake_up = 0x6B;
+    uint8_t sensor_register_address_int_cfg = 0x37;
     std::vector<uint8_t> data_buffer(100);
     size_t head = 0;
     size_t tail = 0;
@@ -67,12 +70,15 @@ void init_dma(){
 }
 
 
+
+
+
 //setup mcu for sensor external interrupt
 void DRDY_EXTI_Init(){
 
     //Enable GPIO for external interupt
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    GPIOA->MODER &= ~ (0xFU << 0);
+    GPIOA->MODER &= ~ (0x3U << 0);
 
     //Enable syscfg
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
@@ -84,6 +90,16 @@ void DRDY_EXTI_Init(){
     EXTI->PR = EXTI_PR_PR0;
 
     NVIC_EnableIRQ(EXTI0_IRQn);
+
+}
+
+
+void sensor_system_init(){
+    DRDY_EXTI_Init();
+
+    i2c.writeTo(sensor_address, sensor_register_address_wake_up, 0x01);
+    i2c.writeTo(sensor_address,sensor_register_address_int_cfg, 0x00);
+    i2c.writeTo(sensor_address, sensor_register_address_en_drdy, 0x01);
 
 }
 
@@ -119,6 +135,7 @@ void DMA2_Stream0_IRQHandler(void) {
 
 //Sensor Interrupt handler (i2c)
 void EXTIO_IRQHandler(void){
+     GPIOA->ODR ^= (1U << 5);
     if(EXTI->PR & EXTI_PR_PR0){
 
         //setupDMARead from i2c
@@ -177,20 +194,57 @@ void adc_start(){
     ADC1->CR2 |= ADC_CR2_SWSTART;
 }
 
+
+void setUpToggle(){
+    //Toggle on pin 5
+
+
+    /*
+        RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+    GPIOA->MODER &= ~ GPIO_MODER_MODE5 ;
+    GPIOA->MODER |= 1U << GPIO_MODER_MODE5_Pos;
+
+    GPIOA->OTYPER &= ~GPIO_OTYPER_OT5; 
+
+    GPIOA->OSPEEDR &= ~GPIO_OSPEEDER_OSPEEDR5;
+    */
+
+        RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+    // Safely clear ONLY pin 5 bits (bits 10 and 11 of MODER)
+    GPIOA->MODER &= ~(3U << (5 * 2));
+    // Set ONLY pin 5 to General Purpose Output (01)
+    GPIOA->MODER |= (1U << (5 * 2));
+
+    // Safely clear pin 5 output type (Push-Pull)
+    GPIOA->OTYPER &= ~(1U << 5); 
+
+    // Set pin 5 to Low Speed to completely eliminate electrical noise on the board
+    GPIOA->OSPEEDR &= ~(3U << (5 * 2));
+
+}
+
+volatile uint32_t reset_reason = 0;
 int main(){
 
-
+    setUpToggle();
     i2c.init();
+    sensor_system_init();
     init_dma();
 
     SpiMaster spi(SPI1);
     spi.init(SpiMaster::Mode::MODE1, SpiMaster::Prescaler::Div64);
 
-
+    
     while (true)
     {
+        //turn on toggle on user led
+       
+          for(volatile int i = 0; i < 100000; i++);
         size_t local_tail = head;
         if(head != local_tail){
+       //      GPIOA->ODR ^= (1U << 5);
             //new data 
             spi.write(&data_buffer.at(tail), head-tail);
         }

@@ -10,12 +10,15 @@ class I2CDriver {
             BusError,
             ArbitrationLost,
             Nack,
-            Overrun
+            Overrun,
+            Busy
         };
 
         void init();
 
-        void writeTo();
+        I2CDriver::Status writeTo(uint8_t device,
+                         uint8_t reg,
+                         uint8_t value);
 
             
         Status prepareToRead(uint8_t device, uint8_t store);
