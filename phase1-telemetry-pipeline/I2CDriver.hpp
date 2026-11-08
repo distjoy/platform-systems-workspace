@@ -23,6 +23,7 @@ class I2CDriver {
             
         Status prepareToRead(uint8_t device, uint8_t store);
 
+        Status startDmaRead(uint8_t device, uint8_t reg);
         Status setupDMARead(uint8_t device, uint8_t store);
 
         void finishDMAReading();
@@ -42,7 +43,8 @@ class I2CDriver {
     void clearAddressFlag();
 
 
-    Status sendAddress(uint8_t addr, bool read);
+    Status sendAddress(uint8_t addr, bool read,
+    bool clearAddr);
 
     Status start();
 
